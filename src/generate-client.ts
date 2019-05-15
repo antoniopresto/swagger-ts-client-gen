@@ -69,9 +69,9 @@ export const updateAPIEndpoint = (params: { host: string; protocol?: string; }) 
   baseApiUrl = \`\${params.protocol || 'https'}://\${params.host}\`;
 };
 
-function requestMiddleware(error: any, response: any) {
+let requestMiddleware = function requestMiddleware(error: any, response: any) {
   return [error, response]
-}
+};
 
 export const setRequestModifier = (fn: (req: request.SuperAgentRequest) => void) => {
     requestModFn = fn;
@@ -87,13 +87,17 @@ export abstract class ApiService {
     return new Promise<T>((resolve, reject) => {
       let req = request(params.method, params.url)
         .set('Content-Type', 'application/json');
-
+      
+      if (requestModFn) {
+        requestModFn(req);
+      }
+      
       const queryParameters = params.queryParameters;
       if (queryParameters) {
         Object.keys(queryParameters).forEach(key => {
           const value = queryParameters[key];
           if (Object.prototype.toString.call(value) === '[object Date]') {
-            queryParameters[key] = value.toISOString();
+            queryParameters[key] = (value as Date).toISOString();
           }
         });
 
@@ -122,74 +126,75 @@ export abstract class ApiService {
   }
 }
 
-
 {{#models}}
+
+{{#if description}}
+/**
+ * {{description}}
+ */
+{{/if}}
+
+export interface {{name}} {
+  {{#properties}}
+  {{#if description}}
+  /**
+   * {{description}}
+   */
+  {{/if}}
+  {{propertyName}}: {{propertyType}};
+  {{/properties}}
+}
+{{/models}}
+
+{{#services}}
+{{#operations}}
+{{#if hasParameters}}
+
+export interface {{paramsInterfaceName}} {
+  {{#parameters}}
+  {{#if description}}
+  /**
+   * {{description}}
+   */
+  {{/if}}
+  {{parameterName}}: {{parameterType}};
+  {{/parameters}}
+}
+{{/if}}
+{{/operations}}
+{{/services}}
+{{#services}}
+
+export class {{name}} extends ApiService {
+  {{#operations}}
 
   {{#if description}}
   /**
    * {{description}}
    */
   {{/if}}
-  export interface {{name}} {
-    {{#properties}}
-    {{#if description}}
-    /**
-     * {{description}}
-     */
-    {{/if}}
-    {{propertyName}}: {{propertyType}};
-    {{/properties}}
-  }
-  {{/models}}
+  public async {{id}}({{signature}}) {
+    const requestParams: IRequestParams = {
+      method: '{{method}}',
+      url: \`\${baseApiUrl}{{../../apiPath}}{{urlTemplate}}\`
+    };
+    {{#if queryParameters}}
 
-  {{#services}}
-  {{#operations}}
-  {{#if hasParameters}}
-
-  export interface {{paramsInterfaceName}} {
-    {{#parameters}}
-    {{#if description}}
-    /**
-     * {{description}}
-     */
+    requestParams.queryParameters = {
+    {{#queryParameters}}
+      {{this}}: _params.{{this}},
+    {{/queryParameters}}
+    };
     {{/if}}
-    {{parameterName}}: {{parameterType}};
-    {{/parameters}}
+    {{#if hasBodyParameter}}
+
+    requestParams.body = _params.{{bodyParameter}};
+    {{/if}}
+    return this.executeRequest<{{returnType}}>(requestParams);
   }
-  {{/if}}
   {{/operations}}
-  {{/services}}
-  {{#services}}
-  export class {{name}} extends ApiService {
-    {{#operations}}
-
-    {{#if description}}
-    /**
-     * {{description}}
-     */
-    {{/if}}
-    public async {{id}}({{signature}}) {
-      const requestParams: IRequestParams = {
-        method: '{{method}}',
-        url: \`\${baseApiUrl}{{../../apiPath}}{{urlTemplate}}\`
-      };
-      {{#if queryParameters}}
-
-      requestParams.queryParameters = {
-      {{#queryParameters}}
-        {{this}}: _params.{{this}},
-      {{/queryParameters}}
-      };
-      {{/if}}
-      {{#if hasBodyParameter}}
-
-      requestParams.body = _params.{{bodyParameter}};
-      {{/if}}
-      return this.executeRequest<{{returnType}}>(requestParams);
-    }
-    {{/operations}}
-  }
-  {{/services}}
+}
+{{/services}}
 
 `);
 
