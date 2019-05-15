@@ -1,6 +1,6 @@
 {
-  "name": "openapi-ts-client-gen",
-  "version": "1.0.4",
+  "name": "swagger-ts-client-gen",
+  "version": "1.0.5",
   "keywords": [
     "openapi",
     "swagger",
@@ -13,8 +13,8 @@
   "description": "An OpenAPI (Swagger) TypeScript client generator",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
-  "repository": "https://github.com/lukeautry/openapi-ts-client-gen",
-  "author": "Luke Autry <lukeautry@gmail.com>",
+  "repository": "https://github.com/antoniopresto/swagger-ts-client-gen.git",
+  "author": "Antonio Presto <antoniopresto@gmail.com>, Luke Autry <lukeautry@gmail.com>",
   "license": "MIT",
   "scripts": {
     "build": "yarn tsc",
