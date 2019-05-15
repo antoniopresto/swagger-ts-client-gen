@@ -62,8 +62,10 @@ export interface IRequestParams {
   body?: Object;
 }
 
+type ReqModifier = (req: request.SuperAgentRequest) => void;
+
 let baseApiUrl: string = (process.env.API_PROTOCOL || 'https') + "://" + process.env.API_HOST;
-let requestModFn: ((req: request.SuperAgentRequest) => void) | undefined;
+let requestModFn: ReqModifier | undefined;
 
 export const updateAPIEndpoint = (params: { host: string; protocol?: string; }) => {
   baseApiUrl = \`\${params.protocol || 'https'}://\${params.host}\`;
@@ -83,13 +85,17 @@ export const setRequestMiddleware = (fn: (error: any, response: any) => [any, an
 
 
 export abstract class ApiService {
-  protected executeRequest<T>(params: IRequestParams) {
+  protected executeRequest<T>(params: IRequestParams, _requestModFn?: ReqModifier) {
     return new Promise<T>((resolve, reject) => {
       let req = request(params.method, params.url)
         .set('Content-Type', 'application/json');
       
       if (requestModFn) {
         requestModFn(req);
+      }
+      
+      if (_requestModFn) {
+        _requestModFn(req);
       }
       
       const queryParameters = params.queryParameters;
@@ -173,7 +179,13 @@ export class {{name}} extends ApiService {
    * {{description}}
    */
   {{/if}}
-  public async {{id}}({{signature}}) {
+  
+  {{#if signature}}
+    public async {{id}}({{signature}}, requestModFn?: ReqModifier) {
+    {{else}}
+    public async {{id}}(requestModFn?: ReqModifier) {
+  {{/if}}
+  
     const requestParams: IRequestParams = {
       method: '{{method}}',
       url: \`\${baseApiUrl}{{../../apiPath}}{{urlTemplate}}\`
@@ -190,7 +202,7 @@ export class {{name}} extends ApiService {
 
     requestParams.body = _params.{{bodyParameter}};
     {{/if}}
-    return this.executeRequest<{{returnType}}>(requestParams);
+    return this.executeRequest<{{returnType}}>(requestParams, requestModFn);
   }
   {{/operations}}
 }
