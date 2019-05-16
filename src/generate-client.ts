@@ -75,9 +75,12 @@ export const setRequestModifier = (fn: (req: request.SuperAgentRequest) => void)
     requestModFn = fn;
 };
 
-export type TRequestExecReturn = { promise: Promise<any>; request: request.SuperAgentRequest };
+export type TRequestExecReturn<T = any> = {
+  promise: Promise<request.Response & { body: T }>;
+  request: request.SuperAgentRequest;
+};
 
-function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModifier): TRequestExecReturn {
+function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModifier): TRequestExecReturn<T> {
   let req = request(params.method, params.url).set('Content-Type', 'application/json');
 
   if (requestModFn) {
@@ -105,20 +108,16 @@ function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModi
     req.send(params.body);
   }
   
-  const promise = new Promise<T>((resolve, reject) => {
+  const promise = new Promise<request.Response & { body: T }>((resolve, reject) => {
     req.end((error: any, response: request.Response) => {
       if (error || !response.ok) {
-        if (response && response.body) {
-          const customError: any = new Error(response.body.message);
-          customError.status = response.body.status;
-          customError.type = response.body.type;
-          reject(customError);
-          return;
+        if (response) {
+          reject(response);
+        } else {
+          reject(error);
         }
-
-        reject(error);
       } else {
-        resolve(response.body);
+        resolve(response);
       }
     });
   });
@@ -175,9 +174,9 @@ export const {{name}} = {
 {{/if}}
 
 {{#if signature}}
-  {{id}}: async function({{signature}}, requestModFn?: ReqModifier) {
+  {{id}}: function({{signature}}, requestModFn?: ReqModifier) {
   {{else}}
-  {{id}}: async function(requestModFn?: ReqModifier) {
+  {{id}}: function(requestModFn?: ReqModifier) {
 {{/if}}
 
   const requestParams: IRequestParams = {
