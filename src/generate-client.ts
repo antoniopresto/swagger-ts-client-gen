@@ -71,84 +71,78 @@ export const updateAPIEndpoint = (params: { host: string; protocol?: string; }) 
   baseApiUrl = \`\${params.protocol || 'https'}://\${params.host}\`;
 };
 
-let requestMiddleware = function requestMiddleware(error: any, response: any) {
-  return [error, response]
-};
-
 export const setRequestModifier = (fn: (req: request.SuperAgentRequest) => void) => {
     requestModFn = fn;
 };
 
-export const setRequestMiddleware = (fn: (error: any, response: any) => [any, any]) => {
-  requestMiddleware = fn;
-};
+export type TRequestExecReturn = { promise: Promise<any>; request: request.SuperAgentRequest };
 
+function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModifier): TRequestExecReturn {
+  let req = request(params.method, params.url).set('Content-Type', 'application/json');
 
-export abstract class ApiService {
-  protected executeRequest<T>(params: IRequestParams, _requestModFn?: ReqModifier) {
-    return new Promise<T>((resolve, reject) => {
-      let req = request(params.method, params.url)
-        .set('Content-Type', 'application/json');
-      
-      if (requestModFn) {
-        requestModFn(req);
-      }
-      
-      if (_requestModFn) {
-        _requestModFn(req);
-      }
-      
-      const queryParameters = params.queryParameters;
-      if (queryParameters) {
-        Object.keys(queryParameters).forEach(key => {
-          const value = queryParameters[key];
-          if (Object.prototype.toString.call(value) === '[object Date]') {
-            queryParameters[key] = (value as Date).toISOString();
-          }
-        });
-
-        req = req.query(queryParameters);
-      }
-      if (params.body) { req.send(params.body); }
-
-      req.end((_error: any, _response: any) => {
-        const [error, response] = requestMiddleware(_error, _response);
-      
-        if (error || !response.ok) {
-          if (response && response.body) {
-            const customError: any = new Error(response.body.message);
-            customError.status = response.body.status;
-            customError.type = response.body.type;
-            reject(customError);
-            return;
-          }
-
-          reject(error);
-        } else {
-          resolve(response.body);
-        }
-      });
-    });
+  if (requestModFn) {
+    requestModFn(req);
   }
+
+  if (_requestModFn) {
+    _requestModFn(req);
+  }
+
+  const queryParameters = params.queryParameters;
+
+  if (queryParameters) {
+    Object.keys(queryParameters).forEach(key => {
+      const value = queryParameters[key];
+      if (Object.prototype.toString.call(value) === '[object Date]') {
+        queryParameters[key] = (value as Date).toISOString();
+      }
+    });
+
+    req = req.query(queryParameters);
+  }
+  
+  if (params.body) {
+    req.send(params.body);
+  }
+  
+  const promise = new Promise<T>((resolve, reject) => {
+    req.end((error: any, response: request.Response) => {
+      if (error || !response.ok) {
+        if (response && response.body) {
+          const customError: any = new Error(response.body.message);
+          customError.status = response.body.status;
+          customError.type = response.body.type;
+          reject(customError);
+          return;
+        }
+
+        reject(error);
+      } else {
+        resolve(response.body);
+      }
+    });
+  });
+
+  return { promise, request: req };
 }
 
 {{#models}}
 
 {{#if description}}
 /**
- * {{description}}
- */
+* {{description}}
+*/
 {{/if}}
 
 export interface {{name}} {
-  {{#properties}}
-  {{#if description}}
-  /**
-   * {{description}}
-   */
-  {{/if}}
-  {{propertyName}}: {{propertyType}};
-  {{/properties}}
+{{#properties}}
+{{#if description}}
+/**
+ * {{description}}
+ */
+{{/if}}
+{{propertyName}}: {{propertyType}};
+{{/properties}}
 }
 {{/models}}
 
@@ -157,54 +151,54 @@ export interface {{name}} {
 {{#if hasParameters}}
 
 export interface {{paramsInterfaceName}} {
-  {{#parameters}}
-  {{#if description}}
-  /**
-   * {{description}}
-   */
-  {{/if}}
-  {{parameterName}}: {{parameterType}};
-  {{/parameters}}
+{{#parameters}}
+{{#if description}}
+/**
+ * {{description}}
+ */
+{{/if}}
+{{parameterName}}: {{parameterType}};
+{{/parameters}}
 }
 {{/if}}
 {{/operations}}
 {{/services}}
 {{#services}}
 
-export class {{name}} extends ApiService {
-  {{#operations}}
+export const {{name}} = {
+{{#operations}}
 
-  {{#if description}}
-  /**
-   * {{description}}
-   */
+{{#if description}}
+/**
+ * {{description}}
+ */
+{{/if}}
+
+{{#if signature}}
+  {{id}}: async function({{signature}}, requestModFn?: ReqModifier) {
+  {{else}}
+  {{id}}: async function(requestModFn?: ReqModifier) {
+{{/if}}
+
+  const requestParams: IRequestParams = {
+    method: '{{method}}',
+    url: \`\${baseApiUrl}{{../../apiPath}}{{urlTemplate}}\`
+  };
+  {{#if queryParameters}}
+
+  requestParams.queryParameters = {
+  {{#queryParameters}}
+    {{this}}: _params.{{this}},
+  {{/queryParameters}}
+  };
   {{/if}}
-  
-  {{#if signature}}
-    public async {{id}}({{signature}}, requestModFn?: ReqModifier) {
-    {{else}}
-    public async {{id}}(requestModFn?: ReqModifier) {
+  {{#if hasBodyParameter}}
+
+  requestParams.body = _params.{{bodyParameter}};
   {{/if}}
-  
-    const requestParams: IRequestParams = {
-      method: '{{method}}',
-      url: \`\${baseApiUrl}{{../../apiPath}}{{urlTemplate}}\`
-    };
-    {{#if queryParameters}}
-
-    requestParams.queryParameters = {
-    {{#queryParameters}}
-      {{this}}: _params.{{this}},
-    {{/queryParameters}}
-    };
-    {{/if}}
-    {{#if hasBodyParameter}}
-
-    requestParams.body = _params.{{bodyParameter}};
-    {{/if}}
-    return this.executeRequest<{{returnType}}>(requestParams, requestModFn);
-  }
-  {{/operations}}
+  return executeRequest<{{returnType}}>(requestParams, requestModFn);
+},
+{{/operations}}
 }
 {{/services}}
 
