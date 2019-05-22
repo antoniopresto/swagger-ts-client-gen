@@ -10,7 +10,7 @@ interface IArgs extends yargs.Arguments {
 }
 
 yargs
-  .scriptName('openapi-ts-client-gen')
+  .scriptName('swagger-ts-client-gen')
   .command('$0', 'generate client', args => {
     return args.options({
       'namespace': {

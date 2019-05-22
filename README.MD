@@ -4,14 +4,14 @@ Generate a TypeScript client from a swagger.json file
 
 # Install
 
-`[yarn add | npm install] openapi-ts-client-gen`
+`[yarn add | npm install] swagger-ts-client-gen`
 
 # Usage
 
 ## CLI
 
 ```
-openapi-ts-client-gen
+swagger-ts-client-gen
 
 generate client
 
@@ -28,7 +28,7 @@ Options:
 ## Programmatic
 
 ```
-import { generate } from "openapi-ts-client-gen";
+import { generate } from "swagger-ts-client-gen";
 
 generate({
     destPath: "./api.ts",
