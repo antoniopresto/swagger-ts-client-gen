@@ -60,7 +60,7 @@ export interface IRequestParams {
   method: string;
   url: string;
   queryParameters?: { [key: string]: string | boolean | number | Date | undefined };
-  body?: Object;
+  body?: {[key: string]: any};
 }
 
 type ReqModifier = (req: request.SuperAgentRequest) => void;
@@ -107,7 +107,28 @@ function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModi
   }
   
   if (params.body) {
-    req.send(params.body);
+    const keys = Object.keys(params.body);
+    let hasFiles = false;
+
+    keys.forEach(k => {
+      const value = params.body ? params.body[k] : undefined;
+      const isFile = value instanceof File;
+      hasFiles = hasFiles || isFile;
+
+      if (value === undefined) return;
+
+      if (isFile) {
+        req.attach(k, value);
+      } else {
+        req.field(k, value);
+      }
+    });
+
+    if (hasFiles) {
+      req.unset('Content-Type');
+    } else {
+      req.send(params.body);
+    }
   }
   
   const promise = new Promise<request.Response & { body: T }>((resolve, reject) => {
