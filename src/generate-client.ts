@@ -108,24 +108,27 @@ function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModi
   
   if (params.body) {
     const keys = Object.keys(params.body);
-    let hasFiles = false;
+
+    const fileKeys: Array<[string, any]> = [];
+    const otherKeys: Array<[string, any]> = [];
 
     keys.forEach(k => {
       const value = params.body ? params.body[k] : undefined;
       const isFile = value instanceof File;
-      hasFiles = hasFiles || isFile;
 
       if (value === undefined) return;
 
       if (isFile) {
-        req.attach(k, value);
+        fileKeys.push([k, value]);
       } else {
-        req.field(k, value);
+        otherKeys.push([k, value]);
       }
     });
 
-    if (hasFiles) {
+    if (fileKeys.length) {
       req.unset('Content-Type');
+      fileKeys.forEach(([key, value]) => req.attach(key, value));
+      otherKeys.forEach(([key, value]) => req.field(key, value));
     } else {
       req.send(params.body);
     }
