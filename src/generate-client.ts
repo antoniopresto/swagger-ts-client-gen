@@ -82,7 +82,7 @@ export type TRequestExecReturn<T = any> = {
   params: IRequestParams;
 };
 
-function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModifier): TRequestExecReturn<T> {
+export function executeRequest<T = any>(params: IRequestParams, _requestModFn?: ReqModifier): TRequestExecReturn<T> {
   let req = request(params.method, params.url).set('Content-Type', 'application/json');
 
   if (requestModFn) {
