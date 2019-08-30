@@ -166,7 +166,7 @@ export interface {{name}} {
  * {{description}}
  */
 {{/if}}
-"{{propertyName}}": {{propertyType}};
+'{{propertyName}}'{{isRequiredChar}}: {{propertyType}};
 {{/properties}}
 }
 {{/models}}
@@ -434,7 +434,8 @@ const getTemplateView = (swagger: Swagger.ISpec, baseUrl: string): ITemplateView
           const isRequired = definition.required && definition.required.find(propertyName => propertyName === propertyKey);
 
           return {
-            propertyName: `${propertyKey}${isRequired ? '' : '?'}`,
+            isRequiredChar: isRequired ? '' : '?',
+            propertyName: propertyKey,
             propertyType: getPropertyTypeFromSwaggerProperty(property),
             description: property.description
           };
