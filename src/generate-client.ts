@@ -166,7 +166,7 @@ export interface {{name}} {
  * {{description}}
  */
 {{/if}}
-{{propertyName}}: {{propertyType}};
+"{{propertyName}}": {{propertyType}};
 {{/properties}}
 }
 {{/models}}
@@ -200,7 +200,7 @@ export const {{name}} = {
 {{/if}}
 
 {{#if signature}}
-  {{id}}: function({{signature}}, requestModFn?: ReqModifier) {
+  "{{id}}": function({{signature}}, requestModFn?: ReqModifier) {
   {{else}}
   {{id}}: function(requestModFn?: ReqModifier) {
 {{/if}}
@@ -344,7 +344,8 @@ const getTemplateView = (swagger: Swagger.ISpec, baseUrl: string): ITemplateView
           const service = serviceMap[tag] = serviceMap[tag] || { name: `${tag}Service`, operations: [] };
 
           let operationId = operation.operationId.replace('_', '');
-          if (tag) {
+          
+          if (tag && operationId.toLowerCase() !== tag.toLowerCase()) {
             operationId = operationId.replace(tag, '');
           }
 
